@@ -41,7 +41,7 @@ fn is_prime(num: &BigInt, known_primes: SharedPrimes) -> bool {
     let limit = BigInt::from_f64(num.to_f64().unwrap().sqrt()).unwrap() + BigInt::one();
     let not_prime = num::range(start, limit)
                         .step(2)
-                        .chunks(1024)
+                        .chunks(128 * 1024)
                         .into_iter()
                         .map(|chunk| {
                             chunk.collect::<Vec<BigInt>>()
@@ -71,7 +71,7 @@ fn factorize(num: BigInt) -> Option<(BigInt, BigInt)> {
     let start = BigInt::from_u32(3).unwrap();
     let limit = BigInt::from_f64(num.to_f64().unwrap().sqrt()).unwrap();
     let range = num::range(start, limit + BigInt::one());
-    let range_itr = range.into_iter().chunks(1024);
+    let range_itr = range.into_iter().chunks(128 * 1024);
     let result = range_itr
                     .into_iter()
                     .filter_map(|chunk| {
