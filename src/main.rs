@@ -70,6 +70,36 @@ fn is_prime(num: &BigInt, known_primes: SharedPrimes) -> bool {
 
 
 }
+pub fn factorize_prog(num: BigInt) -> Option<(BigInt, BigInt)> {
+    let shared_primes = Arc::new(RwLock::new((vec![], HashSet::new())));
+    let start = BigInt::from_u32(3).unwrap();
+    let limit = BigInt::from_f64(num.to_f64().unwrap().sqrt()).unwrap();
+    let prog_div = (&start - &limit) / BigInt::from_u32(100).unwrap();
+    let range = num::range(start, limit + BigInt::one());
+    let range_itr = range.into_iter().chunks(1024);
+    let result = range_itr
+                    .into_iter()
+                    .filter_map(|chunk| {
+                        chunk.collect::<Vec<BigInt>>()
+                            .into_par_iter()
+                            .map(|div| {
+                                if div.is_multiple_of(&prog_div) { println!("{} out of 100", &div / &prog_div) };
+                                div
+                            })
+                            .filter_map(|div| {
+                                if num.is_multiple_of(&div) {
+                                    Some((div.clone(), (&num / div).clone()))
+                                } else {
+                                    None
+                                }
+                            })
+                            .find_any(|&(ref div, ref prob_div)| {
+                                    is_prime(&div, shared_primes.clone()) && is_prime(&prob_div, shared_primes.clone())
+                            })
+                    })
+                    .next();
+    result
+}
 
 pub fn factorize(num: BigInt) -> Option<(BigInt, BigInt)> {
     let shared_primes = Arc::new(RwLock::new((vec![], HashSet::new())));
@@ -103,12 +133,20 @@ pub fn factorize(num: BigInt) -> Option<(BigInt, BigInt)> {
 
 fn main() {
     let n = BigInt::parse_bytes(b"17969491597941066732916128449573246156367561808012600070888918835531726460341490933493372247868650755230855864199929221814436684722874052065257937495694348389263171152522525654410980819170611742509702440718010364831638288518852689", 10).unwrap();
+
+    let n11 = BigInt::from_u32(11).unwrap();
+    let n13 = BigInt::from_u32(13).unwrap();
+    let n370373 = BigInt::from_u32(370373).unwrap();
+    let n336703 = BigInt::from_u32(336703).unwrap();
+
+
+    let testable = n336703 * n370373;
     let factors: Vec<String> =
-        factorize(n.clone())
+        factorize_prog(testable.clone())
             .iter()
             .map(|f| format!("{} * {}",BigInt::to_str_radix(&f.0, 10), BigInt::to_str_radix(&f.1, 10)))
             .collect();
-    println!("Factors for {:?} : {:?}", n.to_str_radix(10), factors);
+    println!("Factors for {:?} : {:?}", testable.to_str_radix(10), factors);
 
 }
 
@@ -121,6 +159,13 @@ mod tests{
     pub fn bench_it(b: &mut test::Bencher) {
         let n_bigger = BigInt::from_u32(370373).unwrap() * BigInt::from_u32(336703).unwrap();
         b.iter(|| factorize(n_bigger.clone()));
+    }
+
+    #[bench]
+    pub fn bench_it_prog(b: &mut test::Bencher) {
+        let n_bigger = BigInt::from_u32(370373).unwrap() * BigInt::from_u32(336703).unwrap();
+        b.iter(|| factorize_prog(n_bigger.clone()));
+
     }
 
     #[test]
