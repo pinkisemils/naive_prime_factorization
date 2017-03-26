@@ -76,7 +76,7 @@ pub fn factorize_prog(num: BigInt) -> Option<(BigInt, BigInt)> {
     let limit = BigInt::from_f64(num.to_f64().unwrap().sqrt()).unwrap();
     let prog_div = (&start - &limit) / BigInt::from_u32(100).unwrap();
     let range = num::range(start, limit + BigInt::one());
-    let range_itr = range.into_iter().chunks(1024);
+    let range_itr = range.into_iter().chunks(128 * 1024);
     let result = range_itr
                     .into_iter()
                     .filter_map(|chunk| {
@@ -141,6 +141,7 @@ fn main() {
 
 
     let testable = n336703 * n370373;
+    let testable = n;
     let factors: Vec<String> =
         factorize_prog(testable.clone())
             .iter()
