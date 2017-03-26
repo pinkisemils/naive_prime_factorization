@@ -1,3 +1,5 @@
+#![feature(test)]
+
 extern crate num;
 use num::bigint::BigInt;
 use num::{FromPrimitive, ToPrimitive, One, Integer};
@@ -16,7 +18,10 @@ use std::collections::HashSet;
 type SharedPrimes = Arc<RwLock<(Vec<BigInt>, HashSet<BigInt>)>>;
 
 fn is_prime(num: &BigInt, known_primes: SharedPrimes) -> bool {
-    if num.is_multiple_of(&BigInt::from_u32(2).unwrap()) || (num.is_multiple_of(&BigInt::from_u32(3).unwrap()) && num != &BigInt::from_u32(3).unwrap()){
+    if num == &BigInt::from_u32(2).unwrap() || num == &BigInt::from_u32(3).unwrap() {
+        return true;
+    }
+    if num.is_multiple_of(&BigInt::from_u32(2).unwrap()) || num.is_multiple_of(&BigInt::from_u32(3).unwrap()) {
         return false;
     }
 
@@ -66,7 +71,7 @@ fn is_prime(num: &BigInt, known_primes: SharedPrimes) -> bool {
 
 }
 
-fn factorize(num: BigInt) -> Option<(BigInt, BigInt)> {
+pub fn factorize(num: BigInt) -> Option<(BigInt, BigInt)> {
     let shared_primes = Arc::new(RwLock::new((vec![], HashSet::new())));
     let start = BigInt::from_u32(3).unwrap();
     let limit = BigInt::from_f64(num.to_f64().unwrap().sqrt()).unwrap();
@@ -91,26 +96,46 @@ fn factorize(num: BigInt) -> Option<(BigInt, BigInt)> {
                     .next();
     {
         let primes = shared_primes.read().unwrap();
-        println!("{:?}",primes.1.iter().map(|p| p).map(|p| format!("{}, ",p.to_str_radix(10))).collect::<Vec<String>>())
     }
-    let n = 336703;
-    println!("{} is prime -> {}",n, is_prime(&BigInt::from_u32(n).unwrap(), shared_primes.clone()) );
-    let n = 370373;
-    println!("{} is prime -> {}",n, is_prime(&BigInt::from_u32(n).unwrap(), shared_primes.clone()) );
     result
 }
 
 
 fn main() {
     let n = BigInt::parse_bytes(b"17969491597941066732916128449573246156367561808012600070888918835531726460341490933493372247868650755230855864199929221814436684722874052065257937495694348389263171152522525654410980819170611742509702440718010364831638288518852689", 10).unwrap();
-    let n_small = BigInt::from_u32(11 * 13).unwrap();
-    let n_bigger = BigInt::from_u32(370373).unwrap() * BigInt::from_u32(336703).unwrap();
-    // println!("Factors for {:?} :\n {:?}", n, factorize(n.clone()));
     let factors: Vec<String> =
         factorize(n.clone())
             .iter()
             .map(|f| format!("{} * {}",BigInt::to_str_radix(&f.0, 10), BigInt::to_str_radix(&f.1, 10)))
             .collect();
     println!("Factors for {:?} : {:?}", n.to_str_radix(10), factors);
+
+}
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+    extern crate test;
+
+    #[bench]
+    pub fn bench_it(b: &mut test::Bencher) {
+        let n_bigger = BigInt::from_u32(370373).unwrap() * BigInt::from_u32(336703).unwrap();
+        b.iter(|| factorize(n_bigger.clone()));
+    }
+
+    #[test]
+    pub fn test_it() {
+        let n11 = BigInt::from_u32(11).unwrap();
+        let n13 = BigInt::from_u32(13).unwrap();
+        let n370373 = BigInt::from_u32(370373).unwrap();
+        let n336703 = BigInt::from_u32(336703).unwrap();
+
+        let n_small = &n11 * &n13;
+        let n_bigger = &n370373 * &n336703;
+        let n_same = &n11 * &n11;
+        assert_eq!(factorize(n_small), Some((n11.clone(), n13)));
+        assert_eq!(factorize(n_bigger), Some((n336703, n370373)));
+        assert_eq!(factorize(n_same), Some((n11.clone(), n11)));
+    }
 
 }
